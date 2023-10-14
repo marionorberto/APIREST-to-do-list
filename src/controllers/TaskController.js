@@ -3,7 +3,7 @@ import Task from '../models/Task';
 class TaskController {
   async index(req, res) {
     try {
-      const tasks = await Task.findAll();
+      const tasks = await Task.findAll({ attributes: ['id', 'task', 'user_id'], order: ['DESC'] });
       if (!tasks) {
         return req.status(400).json({
           errors: ['No Tasks found'],
@@ -17,9 +17,14 @@ class TaskController {
 
   async store(req, res) {
     try {
-      const task = await Task.create(req.body);
+      const { userId } = req;
+      const {
+        id, task, user_id, created_at,
+      } = await Task.create({ ...req.body, user_id: userId });
 
-      return res.status(200).json(task);
+      return res.status(200).json({
+        id, task, user_id, created_at,
+      });
     } catch (err) {
       return res.status(400).json(err.errors.map((e) => e.message));
     }
@@ -27,17 +32,17 @@ class TaskController {
 
   async show(req, res) {
     try {
-      if (!req.params.id) {
-        return res.status(400).json({
-          errors: ['No id especified'],
-        });
-      }
-
-      const task = await Task.findByPk(req.params.id);
-      if (!task) {
+      const taskShow = await Task.findByPk(req.userId);
+      if (!taskShow) {
         return res.status(404).json('Nothing Found');
       }
-      return res.status(200).json(task);
+
+      const {
+        id, task, user_id, created_at,
+      } = taskShow;
+      return res.status(200).json({
+        id, task, user_id, created_at,
+      });
     } catch (err) {
       return res.status(400).json(err.errors.map((e) => e.message));
     }
@@ -45,22 +50,21 @@ class TaskController {
 
   async update(req, res) {
     try {
-      if (!req.params.id) {
-        return res.status(400).json({
-          errors: ['No id especified'],
-        });
-      }
-      const task = await Task.findByPk(req.params.id);
+      const gotTask = await Task.findByPk(req.userId);
 
-      if (!task) {
+      if (!gotTask) {
         return res.status(400).json({
           errors: ['user not found'],
         });
       }
 
-      const userUpdated = await task.update(req.body);
+      const {
+        id, task, user_id, updated_at,
+      } = await gotTask.update(req.body);
 
-      return res.status(200).json(userUpdated);
+      return res.status(200).json({
+        id, task, user_id, updated_at,
+      });
     } catch (err) {
       return res.status(400).json(err.errors.map((e) => e.message));
     }
@@ -68,20 +72,14 @@ class TaskController {
 
   async delete(req, res) {
     try {
-      if (!req.params.id) {
-        return res.status(400).json({
-          errors: ['No id especified'],
-        });
-      }
-
-      const task = await Task.findByPk(req.params.id);
+      const task = await Task.findByPk(req.userId);
       if (!task) {
         return res.status(400).json({
           errors: ['user not found'],
         });
       }
 
-      await task.destroy(req.params.id);
+      await task.destroy(req.userId);
       return res.status(200).json({
         state: 'user delete successfully',
       });

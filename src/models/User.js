@@ -34,7 +34,7 @@ export default class User extends Model {
       },
       password: {
         type: Sequelize.VIRTUAL,
-        allowNull: false,
+        defaultValue: '',
         validate: {
           len: {
             args: [8, 255],
@@ -44,8 +44,14 @@ export default class User extends Model {
       },
     }, { sequelize, tableName: 'users' });
     this.addHook('beforeSave', async (user) => {
-      user.password_hash = await bcryptjs.hash(user.password, 10);
+      if (user.password) {
+        user.password_hash = await bcryptjs.hash(user.password, 8);
+      }
     });
     return this;
+  }
+
+  static associate(models) {
+    this.hasMany(models.Task, { foreignKey: 'user_id' });
   }
 }
